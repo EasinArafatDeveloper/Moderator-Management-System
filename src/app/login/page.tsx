@@ -2,13 +2,13 @@
 
 // Let's use "next-auth/react"
 import { signIn as nextAuthSignIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useToast } from "@/components/ui/Toast";
 import { Loader2, Lock, Mail, ShieldAlert, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -54,8 +54,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10">
-      <div className="w-full max-w-md bg-card/60 backdrop-blur-md border border-border/80 rounded-3xl p-8 shadow-2xl shadow-primary/5 transition-all duration-300">
+    <div className="w-full max-w-md bg-card/60 backdrop-blur-md border border-border/80 rounded-3xl p-8 shadow-2xl shadow-primary/5 transition-all duration-300">
         
         {/* Branding header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -162,6 +161,19 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-violet-600/10 via-background to-indigo-600/10">
+      <Suspense fallback={
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      }>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
