@@ -26,7 +26,7 @@ import {
 import Link from "next/link";
 
 export default function AdminOrdersClient() {
-  const { toast } = useToast();
+  const { toast, confirm } = useToast();
   
   // States
   const [orders, setOrders] = useState<any[]>([]);
@@ -115,7 +115,15 @@ export default function AdminOrdersClient() {
   };
 
   const handleDeleteOrder = async (orderId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this order? Point balances will update.")) {
+    const isConfirmed = await confirm({
+      title: "Delete Order?",
+      text: "Are you sure you want to permanently delete this order? Moderator point balances will be recalculated.",
+      icon: "warning",
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "No, cancel",
+    });
+
+    if (!isConfirmed) {
       return;
     }
 

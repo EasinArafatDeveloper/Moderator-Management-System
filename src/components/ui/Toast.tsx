@@ -1,76 +1,129 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import React, { createContext, useContext, useCallback } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import Swal from "sweetalert2";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
-interface Toast {
-  id: string;
-  title?: string;
-  message: string;
-  type: ToastType;
-}
-
 interface ToastContextType {
   toast: (message: string, type?: ToastType, title?: string) => void;
+  confirm: (options: {
+    title: string;
+    text: string;
+    icon?: "warning" | "error" | "success" | "info" | "question";
+    confirmButtonText?: string;
+    cancelButtonText?: string;
+  }) => Promise<boolean>;
+  alert: (options: {
+    title: string;
+    text: string;
+    icon?: "warning" | "error" | "success" | "info";
+  }) => Promise<void>;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+  
+  const showToast = useCallback((message: string, type: ToastType = "info", title?: string) => {
+    const formattedMessage = title ? `${title}: ${message}` : message;
+    
+    // Customize toast style based on theme (dark mode compatibility)
+    const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+    
+    const toastStyle = {
+      background: isDark ? "#1e293b" : "#ffffff",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      borderRadius: "12px",
+      border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.05)",
+      fontSize: "13px",
+      fontWeight: "600",
+      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      padding: "12px 16px",
+    };
 
-  const toast = useCallback((message: string, type: ToastType = "info", title?: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, title, message, type }]);
-
-    // Auto dismiss after 4 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    switch (type) {
+      case "success":
+        toast.success(formattedMessage, { style: toastStyle });
+        break;
+      case "error":
+        toast.error(formattedMessage, { style: toastStyle, duration: 5000 });
+        break;
+      case "warning":
+        toast(formattedMessage, {
+          icon: "⚠️",
+          style: toastStyle,
+        });
+        break;
+      case "info":
+      default:
+        toast(formattedMessage, {
+          icon: "ℹ️",
+          style: toastStyle,
+        });
+        break;
+    }
   }, []);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const confirm = useCallback(async (options: {
+    title: string;
+    text: string;
+    icon?: "warning" | "error" | "success" | "info" | "question";
+    confirmButtonText?: string;
+    cancelButtonText?: string;
+  }): Promise<boolean> => {
+    const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+    const result = await Swal.fire({
+      title: options.title,
+      text: options.text,
+      icon: options.icon || "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6", // Primary blue (tailwind blue-500)
+      cancelButtonColor: "#ef4444", // Red (tailwind red-500)
+      confirmButtonText: options.confirmButtonText || "Yes, proceed",
+      cancelButtonText: options.cancelButtonText || "Cancel",
+      background: isDark ? "#1e293b" : "#ffffff",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      customClass: {
+        popup: "rounded-3xl border border-border shadow-2xl p-6",
+        title: "text-lg font-black mt-2",
+        htmlContainer: "text-xs font-semibold text-muted-foreground mt-1",
+        confirmButton: "px-5 py-2.5 rounded-xl text-xs font-bold mr-2 text-white bg-blue-500 hover:bg-blue-600 transition-colors",
+        cancelButton: "px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors",
+      },
+      buttonsStyling: false, // Disables SweetAlert2 default button styling to apply our custom Tailwind classes
+    });
+    return result.isConfirmed;
+  }, []);
+
+  const alert = useCallback(async (options: {
+    title: string;
+    text: string;
+    icon?: "warning" | "error" | "success" | "info";
+  }): Promise<void> => {
+    const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+    await Swal.fire({
+      title: options.title,
+      text: options.text,
+      icon: options.icon || "info",
+      confirmButtonColor: "#3b82f6",
+      background: isDark ? "#1e293b" : "#ffffff",
+      color: isDark ? "#f8fafc" : "#0f172a",
+      customClass: {
+        popup: "rounded-3xl border border-border shadow-2xl p-6",
+        title: "text-lg font-black mt-2",
+        htmlContainer: "text-xs font-semibold text-muted-foreground mt-1",
+        confirmButton: "px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 transition-colors",
+      },
+      buttonsStyling: false,
+    });
   }, []);
 
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={{ toast: showToast, confirm, alert }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border animate-slide-in backdrop-blur-md transition-all duration-300 ${
-              t.type === "success"
-                ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400"
-                : t.type === "error"
-                ? "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
-                : t.type === "warning"
-                ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                : "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
-            }`}
-          >
-            <div className="flex-shrink-0 mt-0.5">
-              {t.type === "success" && <CheckCircle className="w-5 h-5" />}
-              {t.type === "error" && <AlertCircle className="w-5 h-5" />}
-              {t.type === "warning" && <AlertTriangle className="w-5 h-5" />}
-              {t.type === "info" && <Info className="w-5 h-5" />}
-            </div>
-            <div className="flex-1">
-              {t.title && <h4 className="font-semibold text-sm leading-tight mb-1">{t.title}</h4>}
-              <p className="text-sm font-medium opacity-90">{t.message}</p>
-            </div>
-            <button
-              onClick={() => removeToast(t.id)}
-              className="flex-shrink-0 opacity-50 hover:opacity-100 transition-opacity"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+      <Toaster position="bottom-right" reverseOrder={false} />
     </ToastContext.Provider>
   );
 }

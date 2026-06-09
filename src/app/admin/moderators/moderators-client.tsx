@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 export default function ModeratorsClient() {
-  const { toast } = useToast();
+  const { toast, confirm } = useToast();
   const [moderators, setModerators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -73,7 +73,15 @@ export default function ModeratorsClient() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this moderator? This will purge all their order history!")) {
+    const isConfirmed = await confirm({
+      title: "Delete Moderator?",
+      text: "Are you sure you want to delete this moderator? This will permanently purge all their order history!",
+      icon: "warning",
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "No, cancel",
+    });
+
+    if (!isConfirmed) {
       return;
     }
 
