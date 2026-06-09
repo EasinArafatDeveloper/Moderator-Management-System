@@ -24,6 +24,7 @@ export default function ModeratorsClient() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Editing dialog state
   const [editingMod, setEditingMod] = useState<any | null>(null);
@@ -34,8 +35,8 @@ export default function ModeratorsClient() {
   const [editPoints, setEditPoints] = useState(0);
   const [editNotes, setEditNotes] = useState("");
 
-  const loadModerators = useCallback(async () => {
-    setLoading(true);
+  const loadModerators = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const res = await getModerators({
         search,
@@ -59,16 +60,19 @@ export default function ModeratorsClient() {
   }, [loadModerators]);
 
   const handleStatusChange = async (id: string, newStatus: "Approved" | "Suspended" | "Pending") => {
+    setUpdatingId(id);
     try {
       const res = await updateModeratorStatus(id, newStatus);
       if (res.success) {
         toast(`Moderator status updated to ${newStatus}.`, "success");
-        loadModerators();
+        await loadModerators(true);
       } else {
         toast(res.error || "Failed to update status.", "error");
       }
     } catch (err) {
       toast("Error changing status.", "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -85,16 +89,19 @@ export default function ModeratorsClient() {
       return;
     }
 
+    setUpdatingId(id);
     try {
       const res = await deleteModerator(id);
       if (res.success) {
         toast("Moderator deleted successfully.", "success");
-        loadModerators();
+        await loadModerators(true);
       } else {
         toast(res.error || "Failed to delete moderator.", "error");
       }
     } catch (err) {
       toast("Error deleting user.", "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -255,48 +262,57 @@ export default function ModeratorsClient() {
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">{formatDate(mod.createdAt).split(",")[0]}</td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        {mod.status === "Pending" && (
-                          <button
-                            onClick={() => handleStatusChange(mod.id, "Approved")}
-                            className="p-1.5 rounded-lg border border-green-500/20 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-all duration-200"
-                            title="Approve User"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                          </button>
+                      <div className="flex justify-end items-center gap-2 min-h-[30px]">
+                        {updatingId === mod.id ? (
+                          <div className="flex items-center gap-1.5 text-primary text-xs font-semibold px-2">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </div>
+                        ) : (
+                          <>
+                            {mod.status === "Pending" && (
+                              <button
+                                onClick={() => handleStatusChange(mod.id, "Approved")}
+                                className="p-1.5 rounded-lg border border-green-500/20 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-all duration-200"
+                                title="Approve User"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {mod.status === "Approved" && (
+                              <button
+                                onClick={() => handleStatusChange(mod.id, "Suspended")}
+                                className="p-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all duration-200"
+                                title="Suspend User"
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {mod.status === "Suspended" && (
+                              <button
+                                onClick={() => handleStatusChange(mod.id, "Approved")}
+                                className="p-1.5 rounded-lg border border-green-500/20 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-all duration-200"
+                                title="Re-activate User"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openEditModal(mod)}
+                              className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary/40 text-foreground transition-all duration-200"
+                              title="Edit Profile Settings"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(mod.id)}
+                              className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-all duration-200"
+                              title="Delete Moderator"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
-                        {mod.status === "Approved" && (
-                          <button
-                            onClick={() => handleStatusChange(mod.id, "Suspended")}
-                            className="p-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all duration-200"
-                            title="Suspend User"
-                          >
-                            <UserX className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {mod.status === "Suspended" && (
-                          <button
-                            onClick={() => handleStatusChange(mod.id, "Approved")}
-                            className="p-1.5 rounded-lg border border-green-500/20 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 transition-all duration-200"
-                            title="Re-activate User"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => openEditModal(mod)}
-                          className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary/40 text-foreground transition-all duration-200"
-                          title="Edit Profile Settings"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(mod.id)}
-                          className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-all duration-200"
-                          title="Delete Moderator"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     </td>
                   </tr>

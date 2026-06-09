@@ -32,6 +32,7 @@ export default function AdminOrdersClient() {
   const [orders, setOrders] = useState<any[]>([]);
   const [moderators, setModerators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   
   // Filter states
   const [search, setSearch] = useState("");
@@ -59,8 +60,8 @@ export default function AdminOrdersClient() {
     }
   };
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
+  const loadOrders = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const res = await getOrders({
         status,
@@ -98,11 +99,12 @@ export default function AdminOrdersClient() {
   }, [loadOrders]);
 
   const handleStatusChange = async (orderId: string, newStatus: "Pending" | "Confirmed" | "Delivered" | "Cancelled") => {
+    setUpdatingId(orderId);
     try {
       const res = await updateOrderStatus(orderId, newStatus);
       if (res.success) {
         toast(`Order status changed to ${newStatus}.`, "success", "Order Updated");
-        loadOrders();
+        await loadOrders(true);
         if (selectedOrder && selectedOrder.id === orderId) {
           setSelectedOrder(res.order);
         }
@@ -111,6 +113,8 @@ export default function AdminOrdersClient() {
       }
     } catch (err) {
       toast("Error updating order.", "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -127,17 +131,20 @@ export default function AdminOrdersClient() {
       return;
     }
 
+    setUpdatingId(orderId);
     try {
       const res = await deleteOrder(orderId);
       if (res.success) {
         toast("Order deleted successfully.", "success");
         setSelectedOrder(null);
-        loadOrders();
+        await loadOrders(true);
       } else {
         toast(res.error || "Failed to delete order.", "error");
       }
     } catch (err) {
       toast("Error deleting order.", "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -437,52 +444,67 @@ export default function AdminOrdersClient() {
                         {formatPrice(order.totalAmount)}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <select
-                          value={order.status}
-                          onChange={(e: any) => handleStatusChange(order.id, e.target.value)}
-                          className={cn(
-                            "px-2 py-1 bg-secondary border border-border rounded-lg text-[10px] font-bold focus:outline-none focus:ring-1 focus:ring-primary",
-                            order.status === "Pending" && "text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border-yellow-500/15",
-                            order.status === "Confirmed" && "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/15",
-                            order.status === "Delivered" && "text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/15",
-                            order.status === "Cancelled" && "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/15"
-                          )}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Confirmed">Confirmed</option>
-                          <option value="Delivered">Delivered</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
+                        {updatingId === order.id ? (
+                          <div className="flex items-center justify-center gap-1.5 text-primary text-[10px] font-bold py-1 px-2.5 bg-primary/5 rounded-lg border border-primary/10">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Saving...</span>
+                          </div>
+                        ) : (
+                          <select
+                            value={order.status}
+                            onChange={(e: any) => handleStatusChange(order.id, e.target.value)}
+                            className={cn(
+                              "px-2 py-1 bg-secondary border border-border rounded-lg text-[10px] font-bold focus:outline-none focus:ring-1 focus:ring-primary",
+                              order.status === "Pending" && "text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 border-yellow-500/15",
+                              order.status === "Confirmed" && "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/15",
+                              order.status === "Delivered" && "text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/15",
+                              order.status === "Cancelled" && "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/15"
+                            )}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">{formatDate(order.createdAt).split(",")[0]}</td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => setSelectedOrder(order)}
-                            className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary/40 text-foreground transition-all duration-200"
-                            title="View Order Details"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </button>
-                          
-                          {(order.status === "Confirmed" || order.status === "Delivered") && (
-                            <Link
-                              href={`/api/invoice/${order.id}`}
-                              target="_blank"
-                              className="p-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200"
-                              title="Print Invoice"
-                            >
-                              <TrendingUp className="w-3.5 h-3.5 rotate-45" />
-                            </Link>
-                          )}
+                        <div className="flex justify-end items-center gap-2 min-h-[30px]">
+                          {updatingId === order.id ? (
+                            <div className="flex items-center text-primary text-xs font-semibold px-2">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setSelectedOrder(order)}
+                                className="p-1.5 rounded-lg border border-border bg-background hover:bg-secondary/40 text-foreground transition-all duration-200"
+                                title="View Order Details"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {(order.status === "Confirmed" || order.status === "Delivered") && (
+                                <Link
+                                  href={`/api/invoice/${order.id}`}
+                                  target="_blank"
+                                  className="p-1.5 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200"
+                                  title="Print Invoice"
+                                >
+                                  <TrendingUp className="w-3.5 h-3.5 rotate-45" />
+                                </Link>
+                              )}
 
-                          <button
-                            onClick={() => handleDeleteOrder(order.id)}
-                            className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-all duration-200"
-                            title="Delete Order Record"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                              <button
+                                onClick={() => handleDeleteOrder(order.id)}
+                                className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-600 dark:text-red-400 transition-all duration-200"
+                                title="Delete Order Record"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

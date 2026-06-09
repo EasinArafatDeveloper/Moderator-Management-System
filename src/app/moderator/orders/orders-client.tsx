@@ -39,8 +39,8 @@ export default function OrdersClient({ userId }: OrdersClientProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
+  const loadOrders = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const res = await getOrders({
         moderatorId: userId,
@@ -273,7 +273,7 @@ export default function OrdersClient({ userId }: OrdersClientProps) {
             <OrderForm
               onSuccess={() => {
                 setIsFormOpen(false);
-                loadOrders();
+                loadOrders(true);
               }}
             />
           </div>
