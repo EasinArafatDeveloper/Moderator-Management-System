@@ -35,29 +35,51 @@ function serializeDoc(doc: any) {
   delete obj.__v;
   
   // Convert dates to string ISO
-  if (obj.createdAt) obj.createdAt = obj.createdAt.toISOString();
-  if (obj.updatedAt) obj.updatedAt = obj.updatedAt.toISOString();
-  if (obj.date) obj.date = obj.date.toISOString();
+  if (obj.createdAt && typeof obj.createdAt.toISOString === "function") {
+    obj.createdAt = obj.createdAt.toISOString();
+  }
+  if (obj.updatedAt && typeof obj.updatedAt.toISOString === "function") {
+    obj.updatedAt = obj.updatedAt.toISOString();
+  }
+  if (obj.date && typeof obj.date.toISOString === "function") {
+    obj.date = obj.date.toISOString();
+  }
   
   // Handle nested moderatorId ref
-  if (obj.moderatorId && typeof obj.moderatorId === "object") {
-    if (obj.moderatorId._id) obj.moderatorId.id = obj.moderatorId._id.toString();
-    delete obj.moderatorId._id;
-    delete obj.moderatorId.password; // Do not leak hash
-    if (obj.moderatorId.createdAt) obj.moderatorId.createdAt = obj.moderatorId.createdAt.toISOString();
-    if (obj.moderatorId.updatedAt) obj.moderatorId.updatedAt = obj.moderatorId.updatedAt.toISOString();
-  } else if (obj.moderatorId) {
-    obj.moderatorId = obj.moderatorId.toString();
+  if (obj.moderatorId) {
+    if (typeof obj.moderatorId === "object" && obj.moderatorId.username) {
+      const mod = obj.moderatorId.toObject ? obj.moderatorId.toObject() : obj.moderatorId;
+      if (mod._id) mod.id = mod._id.toString();
+      delete mod._id;
+      delete mod.password; // Do not leak hash
+      if (mod.createdAt && typeof mod.createdAt.toISOString === "function") {
+        mod.createdAt = mod.createdAt.toISOString();
+      }
+      if (mod.updatedAt && typeof mod.updatedAt.toISOString === "function") {
+        mod.updatedAt = mod.updatedAt.toISOString();
+      }
+      obj.moderatorId = mod;
+    } else {
+      obj.moderatorId = obj.moderatorId.toString();
+    }
   }
   
   // Handle nested orderId ref
-  if (obj.orderId && typeof obj.orderId === "object") {
-    if (obj.orderId._id) obj.orderId.id = obj.orderId._id.toString();
-    delete obj.orderId._id;
-    if (obj.orderId.createdAt) obj.orderId.createdAt = obj.orderId.createdAt.toISOString();
-    if (obj.orderId.updatedAt) obj.orderId.updatedAt = obj.orderId.updatedAt.toISOString();
-  } else if (obj.orderId) {
-    obj.orderId = obj.orderId.toString();
+  if (obj.orderId) {
+    if (typeof obj.orderId === "object" && obj.orderId.customerName) {
+      const ord = obj.orderId.toObject ? obj.orderId.toObject() : obj.orderId;
+      if (ord._id) ord.id = ord._id.toString();
+      delete ord._id;
+      if (ord.createdAt && typeof ord.createdAt.toISOString === "function") {
+        ord.createdAt = ord.createdAt.toISOString();
+      }
+      if (ord.updatedAt && typeof ord.updatedAt.toISOString === "function") {
+        ord.updatedAt = ord.updatedAt.toISOString();
+      }
+      obj.orderId = ord;
+    } else {
+      obj.orderId = obj.orderId.toString();
+    }
   }
   
   return obj;
