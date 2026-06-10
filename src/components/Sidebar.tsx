@@ -31,7 +31,6 @@ export default function Sidebar({ role, userName, userPoints, className, onClose
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Moderators", href: "/admin/moderators", icon: Users },
     { name: "Orders", href: "/admin/orders", icon: ShoppingBag },
-    { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 

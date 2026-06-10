@@ -76,7 +76,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
 
         <!-- Print Page Container -->
         <div id="print-area" class="max-w-3xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-md">
-          {/* Header */}
+          <!-- Header -->
           <div class="flex flex-col sm:flex-row justify-between items-start gap-6 pb-8 border-b border-slate-100">
             <div>
               <div class="flex items-center gap-2">
@@ -93,9 +93,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
             </div>
           </div>
 
-          {/* Details split */}
+          <!-- Details split -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-b border-slate-100 text-xs">
-            {/* Bill To */}
+            <!-- Bill To -->
             <div class="space-y-2">
               <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bill To Customer</h3>
               <p class="text-sm font-bold text-slate-800">${order.customerName}</p>
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
               ${order.alternativePhone ? `<p class="text-slate-400 font-semibold">Alternative Phone: ${order.alternativePhone}</p>` : ""}
               <p class="text-slate-500 leading-normal mt-1">${order.address}</p>
             </div>
-            {/* Order Meta */}
+            <!-- Order Meta -->
             <div class="space-y-2 text-left sm:text-right">
               <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order Meta</h3>
               <p class="font-semibold text-slate-700">Moderator: <span class="font-bold text-slate-800">${moderator?.name || "Deleted"}</span></p>
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
             </div>
           </div>
 
-          {/* Products Summary Table */}
+          <!-- Products Summary Table -->
           <div class="py-8">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
             </table>
           </div>
 
-          {/* Pricing Totals */}
+          <!-- Pricing Totals -->
           <div class="border-t border-slate-100 pt-6 flex justify-end text-xs font-semibold">
             <div class="w-64 space-y-2.5">
               <div class="flex justify-between text-slate-500">
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orde
             </div>
           </div>
 
-          {/* Footer Note */}
+          <!-- Footer Note -->
           <div class="mt-16 pt-6 border-t border-slate-100 text-center text-[10px] text-slate-400 font-semibold">
             <p>Thank you for choosing ModManager. Please retain this invoice for your records.</p>
             <p class="mt-1">For support, contact support@modmanager.com</p>

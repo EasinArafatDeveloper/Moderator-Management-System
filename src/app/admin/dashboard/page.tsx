@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAdminDashboardStats, getActivityLogs, getNotifications } from "@/actions/admin-actions";
+import { getAdminDashboardStats, getActivityLogs, getNotifications, getAnalyticsData } from "@/actions/admin-actions";
 import {
   Users,
   ShoppingBag,
@@ -16,6 +16,7 @@ import {
   FileText,
 } from "lucide-react";
 import { formatDate, formatPrice } from "@/lib/utils";
+import AnalyticsCharts from "@/components/AnalyticsCharts";
 
 export default async function AdminDashboard() {
   const session = await getServerSession(authOptions);
@@ -23,10 +24,11 @@ export default async function AdminDashboard() {
     redirect("/login");
   }
 
-  const [statsRes, logsRes, notifRes] = await Promise.all([
+  const [statsRes, logsRes, notifRes, analyticsRes] = await Promise.all([
     getAdminDashboardStats(),
     getActivityLogs(8), // Limit to 8 items for dashboard view
     getNotifications(),
+    getAnalyticsData(),
   ]);
 
   const stats = statsRes.success && statsRes.stats ? statsRes.stats : {
@@ -38,19 +40,18 @@ export default async function AdminDashboard() {
     pendingOrders: 0,
     cancelledOrders: 0,
     totalRevenue: 0,
+    totalProfit: 0,
   };
 
   const logs = logsRes.success && logsRes.logs ? logsRes.logs : [];
   const notifications = notifRes.success && notifRes.notifications ? notifRes.notifications : [];
+  const analyticsData = analyticsRes.success && analyticsRes.analytics ? analyticsRes.analytics : {
+    monthlyStats: [],
+    topModerators: [],
+    statusDistribution: [],
+  };
 
   const statCards = [
-    {
-      name: "Total Moderators",
-      value: stats.totalModerators,
-      subtext: `${stats.activeModerators} active / ${stats.pendingModerators} pending`,
-      icon: Users,
-      color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    },
     {
       name: "Total Sales Orders",
       value: stats.totalOrders,
@@ -66,6 +67,13 @@ export default async function AdminDashboard() {
       color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     },
     {
+      name: "Total Profit",
+      value: formatPrice(stats.totalProfit || 0),
+      subtext: "Sum of all confirmed order profits",
+      icon: Coins,
+      color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+    },
+    {
       name: "Pending Orders",
       value: stats.pendingOrders,
       subtext: "Require status confirmation",
@@ -73,9 +81,9 @@ export default async function AdminDashboard() {
       color: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     },
     {
-      name: "Cancelled Orders",
-      value: stats.cancelledOrders,
-      subtext: "Non-credited orders",
+      name: "Cancelled Orders (Loss)",
+      value: formatPrice(stats.cancelledOrders * 120),
+      subtext: `${stats.cancelledOrders} orders cancelled (120 BDT loss/order)`,
       icon: XCircle,
       color: "bg-red-500/10 text-red-500 border-red-500/20",
     },
@@ -112,6 +120,15 @@ export default async function AdminDashboard() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Analytics Charts Section */}
+      <div className="mt-8">
+        <AnalyticsCharts
+          monthlyStats={analyticsData.monthlyStats}
+          topModerators={analyticsData.topModerators}
+          statusDistribution={analyticsData.statusDistribution}
+        />
       </div>
 
       {/* Main split grid: Activity Log vs System Alerts */}

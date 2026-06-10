@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { getOrders, updateOrderStatus, deleteOrder } from "@/actions/order-actions";
+import { getOrders, updateOrderStatus, deleteOrder, updateOrderProfit } from "@/actions/order-actions";
 import { getModerators } from "@/actions/moderator-actions";
 import { useToast } from "@/components/ui/Toast";
 import { cn, formatDate, formatPrice } from "@/lib/utils";
@@ -48,6 +48,30 @@ export default function AdminOrdersClient() {
 
   // Dialog State
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+
+  // Profit states
+  const [profits, setProfits] = useState<{ [key: string]: string }>({});
+  const [savingProfitId, setSavingProfitId] = useState<string | null>(null);
+
+  const handleSaveProfit = async (orderId: string) => {
+    const profitStr = profits[orderId];
+    const profitVal = parseFloat(profitStr !== undefined ? profitStr : "0") || 0;
+    
+    setSavingProfitId(orderId);
+    try {
+      const res = await updateOrderProfit(orderId, profitVal);
+      if (res.success) {
+        toast("Profit updated successfully.", "success");
+        await loadOrders(true);
+      } else {
+        toast(res.error || "Failed to update profit.", "error");
+      }
+    } catch (err) {
+      toast("Error updating profit.", "error");
+    } finally {
+      setSavingProfitId(null);
+    }
+  };
 
   const loadFilterData = async () => {
     try {
@@ -168,6 +192,7 @@ export default function AdminOrdersClient() {
       "Unit Price",
       "Delivery Charge",
       "Total Amount",
+      "Profit",
       "Status",
       "Notes",
       "Date",
@@ -186,6 +211,7 @@ export default function AdminOrdersClient() {
       o.unitPrice,
       o.deliveryCharge,
       o.totalAmount,
+      o.profit || 0,
       o.status,
       `"${(o.notes || "").replace(/"/g, '""')}"`,
       o.createdAt,
@@ -218,7 +244,7 @@ export default function AdminOrdersClient() {
       <body>
       <table border="1">
         <tr style="background-color:#4F46E5;color:white;font-weight:bold;">
-          <th>Order ID</th><th>Moderator</th><th>Customer</th><th>Phone</th><th>Address</th><th>Product</th><th>Qty</th><th>Price</th><th>Delivery</th><th>Total</th><th>Status</th><th>Date</th>
+          <th>Order ID</th><th>Moderator</th><th>Customer</th><th>Phone</th><th>Address</th><th>Product</th><th>Qty</th><th>Price</th><th>Delivery</th><th>Total</th><th>Profit</th><th>Status</th><th>Date</th>
         </tr>
     `;
 
@@ -235,6 +261,7 @@ export default function AdminOrdersClient() {
           <td>${o.unitPrice}</td>
           <td>${o.deliveryCharge}</td>
           <td>${o.totalAmount}</td>
+          <td>${o.profit || 0}</td>
           <td>${o.status}</td>
           <td>${formatDate(o.createdAt).split(",")[0]}</td>
         </tr>
@@ -399,6 +426,7 @@ export default function AdminOrdersClient() {
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Product details</th>
                 <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4">Profit</th>
                 <th className="px-6 py-4 text-center">Status</th>
                 <th className="px-6 py-4">Date</th>
                 <th className="px-6 py-4 text-right">Actions</th>
@@ -407,7 +435,7 @@ export default function AdminOrdersClient() {
             <tbody className="divide-y divide-border/40">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
+                  <td colSpan={9} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-2 justify-center">
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                       <span className="text-xs font-semibold text-muted-foreground">Loading orders database...</span>
@@ -416,7 +444,7 @@ export default function AdminOrdersClient() {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-xs font-bold text-muted-foreground">
+                  <td colSpan={9} className="px-6 py-12 text-center text-xs font-bold text-muted-foreground">
                     No orders matching selected filters found.
                   </td>
                 </tr>
@@ -442,6 +470,43 @@ export default function AdminOrdersClient() {
                       </td>
                       <td className="px-6 py-4 font-black text-foreground">
                         {formatPrice(order.totalAmount)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-1.5 min-w-[130px]">
+                          <input
+                            type="number"
+                            value={profits[order.id] !== undefined ? profits[order.id] : (order.profit !== undefined ? String(order.profit) : "")}
+                            onChange={(e) => setProfits({ ...profits, [order.id]: e.target.value })}
+                            placeholder="Profit (TK)"
+                            className="w-24 px-2 py-1 bg-secondary/30 border border-border rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                          />
+                          {(() => {
+                            const currentValStr = profits[order.id];
+                            const parsedInput = parseFloat(currentValStr !== undefined ? currentValStr : String(order.profit || "0")) || 0;
+                            const savedVal = order.profit || 0;
+                            const isSaved = parsedInput === savedVal && savedVal > 0;
+
+                            return (
+                              <button
+                                onClick={() => handleSaveProfit(order.id)}
+                                disabled={isSaved || savingProfitId === order.id}
+                                className={cn(
+                                  "inline-flex items-center justify-center p-1.5 rounded-lg text-xs font-bold transition-all border",
+                                  isSaved
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 cursor-not-allowed"
+                                    : "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
+                                )}
+                                title={isSaved ? "Profit Saved" : "Confirm Profit"}
+                              >
+                                {savingProfitId === order.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Check className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         {updatingId === order.id ? (

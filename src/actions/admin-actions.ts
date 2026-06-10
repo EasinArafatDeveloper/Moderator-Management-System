@@ -58,6 +58,12 @@ export async function getAdminDashboardStats() {
     ]);
     const totalRevenue = revenueResult[0]?.total || 0;
 
+    // Total Profit is sum of profit field for all orders
+    const profitResult = await Order.aggregate([
+      { $group: { _id: null, totalProfit: { $sum: "$profit" } } },
+    ]);
+    const totalProfit = profitResult[0]?.totalProfit || 0;
+
     return {
       success: true,
       stats: {
@@ -69,6 +75,7 @@ export async function getAdminDashboardStats() {
         pendingOrders,
         cancelledOrders,
         totalRevenue,
+        totalProfit,
       },
     };
   } catch (error: any) {

@@ -355,3 +355,35 @@ export async function getOrCreateInvoice(orderId: string) {
     return { success: false, error: error.message || "Failed to generate invoice." };
   }
 }
+
+export async function updateOrderProfit(orderId: string, profit: number) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Admin") {
+      return { success: false, error: "Unauthorized. Admin role required." };
+    }
+
+    await connectToDatabase();
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return { success: false, error: "Order not found." };
+    }
+
+    const oldProfit = order.profit || 0;
+    order.profit = profit;
+    await order.save();
+
+    // Log activity
+    await ActivityLog.create({
+      userId: new mongoose.Types.ObjectId(session.user.id),
+      action: "UPDATE_ORDER_PROFIT",
+      details: `Updated Order ID ${orderId} profit from ${oldProfit} to ${profit} BDT`,
+    });
+
+    return { success: true, order: serializeDoc(order) };
+  } catch (error: any) {
+    console.error("Update order profit error:", error);
+    return { success: false, error: error.message || "Failed to update profit." };
+  }
+}

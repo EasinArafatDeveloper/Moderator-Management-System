@@ -14,6 +14,7 @@ export interface IOrder extends Document {
   totalAmount: number;
   status: "Pending" | "Confirmed" | "Delivered" | "Cancelled";
   notes?: string;
+  profit?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +34,7 @@ const OrderSchema: Schema<IOrder> = new Schema(
     totalAmount: { type: Number, required: true },
     status: { type: String, enum: ["Pending", "Confirmed", "Delivered", "Cancelled"], default: "Pending" },
     notes: { type: String, default: "" },
+    profit: { type: Number, default: 0 },
   },
   {
     timestamps: true,
